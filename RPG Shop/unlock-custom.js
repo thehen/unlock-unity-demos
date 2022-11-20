@@ -115092,6 +115092,8 @@ class WalletConnectProvider extends ProviderEngine {
 const { WalletService, Web3Service } = __webpack_require__(5681)
 const { ethers } = __webpack_require__(6934)
 
+window.ethereum.autoRefreshOnNetworkChange = false
+
 const gameObjectName = 'UnlockCustom'
 
 let networks
@@ -115118,7 +115120,6 @@ const nativeSymbols = {
 
 async function initialize (networksJson) {
   networks = JSON.parse(networksJson)
-  console.log(networks)
   web3service = new Web3Service(networks)
   walletService = new WalletService(networks)
 }
@@ -115222,19 +115223,7 @@ async function getHasValidKey (hasValidKeyParamsJson) {
   const network = hasValidKeyParams.network
 
   try {
-    const expiration = await web3service.getKeyExpirationByLockForOwner(
-      lockAddress,
-      hasValidKeyParams.recipient,
-      network
-    )
-
-    const now = Math.floor(new Date().getTime() / 1000)
-
-    hasValidKeyParams.hasKey = false
-    if (expiration > now) {
-      hasValidKeyParams.hasKey = true
-    }
-
+    hasValidKeyParams.hasKey = await web3service.getHasValidKey(lockAddress, hasValidKeyParams.recipient, network)
     window.gameInstance.SendMessage(gameObjectName, 'GetHasValidKeySuccess', JSON.stringify(hasValidKeyParams))
   } catch (e) {
     console.error(e.message)
@@ -115249,6 +115238,17 @@ async function purchaseKey (lockConfig) {
 
   await walletService.connect(provider, signer)
 
+  await walletService.purchaseKey(
+    {
+      lockAddress: lockAddress,
+      referrer: referrer
+    }
+  )
+
+  console.log('success')
+
+  /*
+
   try {
     await walletService.purchaseKey(
       {
@@ -115258,9 +115258,12 @@ async function purchaseKey (lockConfig) {
     )
     window.gameInstance.SendMessage(gameObjectName, 'PurchaseKeySuccess', lockAddress)
   } catch (e) {
+    console.log(e)
     console.error(e.message)
     window.gameInstance.SendMessage(gameObjectName, 'PurchaseKeyFailed', getLockErrorJson(lockAddress, e.message))
   }
+
+  */
 }
 
 async function getNetworkId () {
